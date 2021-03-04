@@ -222,14 +222,15 @@ func (s *testFuncConsumerGroupSink) Close() map[string][]string {
 
 type testFuncConsumerGroupMember struct {
 	ConsumerGroup
-	clientID    string
-	claims      map[string]int
-	state       int32
-	handlers    int32
-	errs        []error
-	maxMessages int32
-	isCapped    bool
-	sink        *testFuncConsumerGroupSink
+	clientID     string
+	claims       map[string]int
+	generationId int32
+	state        int32
+	handlers     int32
+	errs         []error
+	maxMessages  int32
+	isCapped     bool
+	sink         *testFuncConsumerGroupSink
 
 	t  *testing.T
 	mu sync.RWMutex
@@ -244,6 +245,11 @@ func runTestFuncConsumerGroupMember(t *testing.T, groupID, clientID string, maxM
 	config.Consumer.Return.Errors = true
 	config.Consumer.Offsets.Initial = OffsetOldest
 	config.Consumer.Group.Rebalance.Timeout = 10 * time.Second
+	return runTestFuncConsumerGroupMemberWithConfig(t, groupID, maxMessages, config, sink, topics...)
+}
+
+func runTestFuncConsumerGroupMemberWithConfig(t *testing.T, groupID string, maxMessages int32, config *Config, sink *testFuncConsumerGroupSink, topics ...string) *testFuncConsumerGroupMember {
+	t.Helper()
 
 	group, err := NewConsumerGroup(FunctionalTestEnv.KafkaBrokerAddrs, groupID, config)
 	if err != nil {
@@ -257,7 +263,7 @@ func runTestFuncConsumerGroupMember(t *testing.T, groupID, clientID string, maxM
 
 	member := &testFuncConsumerGroupMember{
 		ConsumerGroup: group,
-		clientID:      clientID,
+		clientID:      config.ClientID,
 		claims:        make(map[string]int),
 		maxMessages:   maxMessages,
 		isCapped:      maxMessages != 0,
@@ -330,6 +336,9 @@ func (m *testFuncConsumerGroupMember) Setup(s ConsumerGroupSession) error {
 	m.mu.Lock()
 	m.claims = claims
 	m.mu.Unlock()
+
+	// store generationID
+	atomic.StoreInt32(&m.generationId, s.GenerationID())
 
 	// enter post-setup state
 	atomic.StoreInt32(&m.state, 2)
