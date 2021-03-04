@@ -4,7 +4,6 @@ package sarama
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"reflect"
 	"sync/atomic"
@@ -100,8 +99,6 @@ func TestFuncConsumerGroupStaticMembership_RejoinAndLeave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	aa, _ := json.Marshal(res1)
-	fmt.Printf("got %s\n", aa)
 	if len(res1) != 1 {
 		t.Errorf("group description should be only 1, got %v\n", len(res1))
 	}
@@ -125,9 +122,6 @@ func TestFuncConsumerGroupStaticMembership_RejoinAndLeave(t *testing.T) {
 		t.Errorf("group description be the same before %s, after %s", res1Bytes, res2Bytes)
 	}
 
-	aa, _ = json.Marshal(res2)
-	fmt.Printf("got %s\n", aa)
-
 	generationId2 := atomic.LoadInt32(&m1.generationId)
 	if generationId2 != generationId1 {
 		t.Errorf("m1 generation should not increase expect %v, actual %v", generationId1, generationId2)
@@ -142,8 +136,15 @@ func TestFuncConsumerGroupStaticMembership_RejoinAndLeave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	aa, _ = json.Marshal(res3)
-	fmt.Printf("got %s\n", aa)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res3) != 1 {
+		t.Errorf("group description should be only 1, got %v\n", len(res3))
+	}
+	if len(res3[0].Members) != 2 {
+		t.Errorf("should have 2 members in group , got %v\n", len(res3[0].Members))
+	}
 
 	generationId3 := atomic.LoadInt32(&m1.generationId)
 	if generationId3 != generationId1 {
@@ -164,7 +165,6 @@ func TestFuncConsumerGroupStaticMembership_RejoinAndLeave(t *testing.T) {
 	if generationId4 == generationId1 {
 		t.Errorf("m1 generation should increase expect %v, actual %v", generationId1, generationId2)
 	}
-	fmt.Printf("m1 generation %v\n", generationId4)
 }
 
 func TestFuncConsumerGroupStaticMembership_Fenced(t *testing.T) {
